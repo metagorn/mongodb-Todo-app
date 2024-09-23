@@ -1,101 +1,164 @@
-import Image from "next/image";
+/** @format */
+
+"use client";
+import { useEffect, useState } from "react";
+import Todo from "./Todo";
+import { ITodo } from "./models/todo";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [currentTodo, setCurrentTodo] = useState<ITodo>({
+    name: '',
+    description: '',
+    status: false,
+    duedate: ''
+  });
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const [todos, setTodos] = useState<ITodo[]>([]);
+
+
+  useEffect(() => {
+    fetch('/api/v1/todo',{
+      method: 'GET'
+    }).then(res=>res.json()).then(data=>{
+      const todo = data.data as any;
+      setTodos(todo);
+    });
+  }, []);
+
+  
+  function AddHandler() {
+    fetch("/api/v1/todo", {
+      method: "POST",
+      body: JSON.stringify({
+        name: currentTodo.name,
+        description: currentTodo.description,
+        status: currentTodo.status,
+        duedate: currentTodo.duedate,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        
+        setCurrentTodo({
+          name: "",
+          description: "",
+          status: false,
+          duedate: "",
+        });
+
+        const todo = data.data;
+        setTodos([...todos, todo]);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
+
+  function DeleteHandler(todoId: string) {
+    fetch("/api/v1/todo", {
+      method: "DELETE",
+      body: JSON.stringify({
+        id: todoId,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const todo_id = data.data._id;
+        const copy_todo = [...todos];
+        const todo_todelete = copy_todo.findIndex((x) => x._id == todo_id);
+        copy_todo.splice(todo_todelete, 1);
+        setTodos(copy_todo);
+      });
+  }
+
+  function toggleStatusHandler(todoId: string) {
+    let todo_to_update = todos.findIndex((x) => x._id == todoId);
+
+    fetch("/api/v1/todo", {
+      method: "PUT",
+      body: JSON.stringify({
+        id: todoId,
+        status: todos[todo_to_update].status,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const copy_todo = [...todos];
+        copy_todo[todo_to_update].status = !copy_todo[todo_to_update].status;
+        setTodos(copy_todo);
+      });
+  }
+
+  return (
+    <>
+      <div className="flex justify-center py-8 bg-gradient-to-r from-purple-300 to-indigo-300 min-h-screen">
+        <div className="container bg-white shadow-2xl border border-gray-200 p-10 rounded-3xl max-w-4xl">
+          <p className="text-4xl font-bold text-center mb-6 text-gray-900">Todo App</p>
+          <div className="grid gap-y-6">
+            <div className="grid gap-y-6 p-6 bg-gradient-to-r from-pink-50 to-purple-50 rounded-2xl shadow-inner">
+              <div className="grid sm:grid-cols-1 lg:grid-cols-3 gap-x-6 items-center">
+                <label className="sm:col-span-1 lg:col-span-1 text-lg font-semibold text-gray-800">ชื่อเรื่อง:</label>
+                <input 
+                  type="text" 
+                  id="name" 
+                  className="border border-gray-300 rounded-xl p-3 sm:col-span-1 lg:col-span-2 focus:ring-4 focus:ring-purple-300 shadow-md"
+                  onChange={(event) => {
+                    setCurrentTodo({
+                      ...currentTodo,
+                      name: event.target.value
+                    });
+                  }} 
+                  value={currentTodo.name} 
+                />
+              </div>
+              <div className="grid sm:grid-cols-1 lg:grid-cols-3 gap-x-6 items-center">
+                <label className="sm:col-span-1 lg:col-span-1 text-lg font-semibold text-gray-800">รายละเอียด:</label>
+                <input 
+                  type="text" 
+                  id="description" 
+                  className="border border-gray-300 rounded-xl p-3 sm:col-span-1 lg:col-span-2 focus:ring-4 focus:ring-purple-300 shadow-md"
+                  onChange={(event) => {
+                    setCurrentTodo({
+                      ...currentTodo,
+                      description: event.target.value
+                    });
+                  }} 
+                  value={currentTodo.description} 
+                />
+              </div>
+              <div className="grid sm:grid-cols-1 lg:grid-cols-3 gap-x-6 items-center">
+                <label className="sm:col-span-1 lg:col-span-1 text-lg font-semibold text-gray-800">วันครบกำหนด:</label>
+                <input 
+                  type="datetime-local" 
+                  id="date" 
+                  className="border border-gray-300 rounded-xl p-3 sm:col-span-1 lg:col-span-2 text-center focus:ring-4 focus:ring-purple-300 shadow-md"
+                  onChange={(event) => {
+                    setCurrentTodo({
+                      ...currentTodo,
+                      duedate: event.target.value
+                    });
+                  }} 
+                  value={currentTodo.duedate} 
+                />
+              </div>
+              <div className="grid sm:grid-cols-1 lg:grid-cols-3 gap-x-6">
+                <button 
+                  className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-lg font-semibold rounded-xl p-3 w-full sm:col-span-1 lg:col-span-3 hover:bg-indigo-700 transition transform hover:scale-105"
+                  onClick={AddHandler}
+                >
+                  เพิ่ม
+                </button>
+              </div>
+            </div>
+          </div>
+          <hr className="my-8 border-gray-300" />
+          <div className="grid gap-y-6">
+            {todos.map((todo, index) => {
+              return <Todo key={index} todo={todo} deleteHandler={DeleteHandler} toggleStatusHandler={toggleStatusHandler} />
+            })}
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+    </>
   );
 }
